@@ -1,0 +1,214 @@
+// Kalimbass by Malaclypse the Younger, mal2fnord@gmail.com
+// Solid body "bass kalimba" sampled with two Strat pickups (bridge, + middle for noise canceling only)
+
+// This MIT license applies only to distribution of the Software itself, and
+// individual components that comprise it. There is ABSOLUTELY NO REQUIREMENT
+// to provide credit when merely using the instrument to make sound. You are
+// only required to provide the boilerplate license if distributing the
+// instrument itself or pieces of.
+//
+// --------------------------Begin boilerplate license--------------------------
+// MIT License 
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy 
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions: 
+// 
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software. Additionally, all 
+// alterations which are distributed are to be attributed to the person or
+// organization making them.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+// ---------------------------End boilerplate license---------------------------
+
+// Curve 0 is linear, from 0 to 1. v000=0 v127=1
+// Curve 1 is bipolar, from -1 to 1.  v000=-1 v127=1
+// Curve 2 is inverted linear, from 1 to 0. v000=1 v127=0
+// Curve 3 bipolar inverted, from 1 to -1. v000=1 v127=-1
+// Curve 4 concave (square the Curve 0 value).
+// Curve 5 is Xfin power curve (square root of Curve 0 value).
+// Curve 6 is Xfout power curve (square root of Curve 2 value).
+
+// Curve 7 is Custom: x^.37, Make-up Gain for roll-in. Determined "by ear".
+<curve> curve_index=7 v0=0 v1=0.167 v2=0.215 v3=0.25 v4=0.278 v5=0.302 v6=0.323
+v7=0.342 v8=0.36 v9=0.376 v12=0.418 v15=0.454 v16=0.465 v19=0.495 v24=0.54
+v28=0.572 v37=0.634 v52=0.719 v72=0.811 v95=0.898 v112=0.955 v127=1
+
+<control>
+set_cc1=0 label_cc1=∿1:Mod Depth ₀  // ❶
+set_cc3=63 label_cc3=∿3:Mod Rate ₅₀ // ❶Modulation rate. 0 = 3 Hz, 127 = 8 Hz.
+set_cc4=0 label_cc4=∿4:Mod Fade ₀ // ❶Length of time for modulation to fade in
+set_cc7=80 label_cc7=7:Master Vol. ₆₃  // ❶
+// CC8 = Balance. Mono samples so this would do nothing.
+// This line is for the CC switched version.
+// set_cc10=0 label_cc10=10:Artic ⁰₂₀⁵⁰₈₀¹⁰⁰ // 0 = Auto (controlled by Velocity), 1-33% Soft samples, 34-66% Medium samples, 67-100% Hard samples
+set_cc11=6 label_cc11=11:Sustain ₅ // ❶Max roll-in time. Generates sustain out of plinky samples.
+default_path=Samples/ // I use a flat file structure. How convenient.
+
+// Definitions. So you don't have to edit the working code just to tweak a value.
+#define $MASTERTUNE 2.9 // 0=Right on A=440 Hz. Add 3.9 for 441 Hz, 7.8 for 442, and so on. -100 for 415 Hz, -200 for 390 Hz.
+#define $LOVELOCITYMAX 48 // What is the maximum velocity that triggers the soft sample in Auto mode?
+#define $MIDVELOCITYMIN 49 // What is the minimum velocity that triggers the medium sample in Auto mode? (usually $LOVELOCITYMAX+1)
+#define $MIDVELOCITYMAX 91 // What is the maximum velocity that triggers the medium sample in Auto mode?
+#define $HIVELOCITYMIN 92 // What is the minimum velocity that triggers the hard sample in Auto mode? (usually $MIDVELOCITYMAX+1)
+#define $HIVELOCITYMAX 126 // What is the maximum velocity that triggers the hard sample in Auto mode?
+#define $PONTVELOCITYMIN 127 // What is the minimum velocity that triggers the sul pont sample in Auto mode? (usually $HIVELOCITYMAX+1)
+#define $BENDUP 12 // What is the default upward pitch bend range (in semitones)?
+#define $BENDDOWN 12 // What is the default upward pitch bend range (in semitones)?
+
+<global>
+// ▒▒▒▒▒EDIT THIS SECTION AT YOUR OWN RISK▒▒▒▒▒
+// Screwing up here can result in a +48dB oopsie.
+ampeg_attack=0.001 ampeg_release=0.15 amp_veltrack=98 // Keeps dynamic range to about 36 dB (ff attack vs. pp attack)
+fileg_attack=0.1 ampeg_attackcc11=1 // Max roll-in of notes based on CC11 (time in seconds).
+volume_oncc11=36 volume_curvecc11=7 // Volume make-up for roll-ins.
+// ▒▒▒▒▒END OF DANGER WILL ROBINSON WARNING▒▒▒▒▒
+lfo01_pitch_oncc1=200 // Width of maximum modulation.
+lfo01_freq=3 lfo01_freq_oncc3=5 // Modulation rate. 0 = 3 Hz, 127 = 8 Hz.
+lfo01_fade_oncc4=3 // onset time for modulation
+amplitude_oncc7=100 amplitude_curvecc7=4 // default for CC7, specifying avoids glitchiness.
+bend_up=$BENDUP bend_down=$BENDDOWN tune=$MASTERTUNE
+sw_default=12 sw_lokey=12 sw_hikey=16 
+
+// Auto Sample: Default
+// Velocity regions are defined by $LOVELOCITYMAX, $MIDVELOCITYMIN, etc. in Definitions.
+<master> sw_last=12 group=5 sw_label=C-1 Auto Artic
+  <group> key=23 lokey=19 hikey=24
+    <region> lovel=0 hivel=$LOVELOCITYMAX sample=kalimbass_23-B-1_v1.flac
+    <region> lovel=$MIDVELOCITYMIN hivel=$MIDVELOCITYMAX sample=kalimbass_23-B-1_v2.flac
+    <region> lovel=$HIVELOCITYMIN hivel=$HIVELOCITYMAX sample=kalimbass_23-B-1_v3.flac
+  <group> key=26 lokey=25 hikey=27
+    <region> lovel=0 hivel=$LOVELOCITYMAX sample=kalimbass_26-D0_v1.flac
+    <region> lovel=$MIDVELOCITYMIN hivel=$MIDVELOCITYMAX sample=kalimbass_26-D0_v2.flac
+    <region> lovel=$HIVELOCITYMIN hivel=$HIVELOCITYMAX sample=kalimbass_26-D0_v3.flac
+  <group> key=29 lokey=28 hikey=30
+    <region> lovel=0 hivel=$LOVELOCITYMAX sample=kalimbass_29-F0_v1.flac
+    <region> lovel=$MIDVELOCITYMIN hivel=$MIDVELOCITYMAX sample=kalimbass_29-F0_v2.flac
+    <region> lovel=$HIVELOCITYMIN hivel=$HIVELOCITYMAX sample=kalimbass_29-F0_v3.flac
+  <group> key=32 lokey=31 hikey=33
+    <region> lovel=0 hivel=$LOVELOCITYMAX sample=kalimbass_32-G#0_v1.flac
+    <region> lovel=$MIDVELOCITYMIN hivel=$MIDVELOCITYMAX sample=kalimbass_32-G#0_v2.flac
+    <region> lovel=$HIVELOCITYMIN hivel=$HIVELOCITYMAX sample=kalimbass_32-G#0_v3.flac
+  <group> key=35 lokey=34 hikey=36
+    <region> lovel=0 hivel=$LOVELOCITYMAX sample=kalimbass_35-B0_v1.flac
+    <region> lovel=$MIDVELOCITYMIN hivel=$MIDVELOCITYMAX sample=kalimbass_35-B0_v2.flac
+    <region> lovel=$HIVELOCITYMIN hivel=$HIVELOCITYMAX sample=kalimbass_35-B0_v3.flac tune=20
+  <group> key=38 lokey=37 hikey=39
+    <region> lovel=0 hivel=$LOVELOCITYMAX sample=kalimbass_38-D1_v1.flac
+    <region> lovel=$MIDVELOCITYMIN hivel=$MIDVELOCITYMAX sample=kalimbass_38-D1_v2.flac
+    <region> lovel=$HIVELOCITYMIN hivel=$HIVELOCITYMAX sample=kalimbass_38-D1_v3.flac
+  <group> key=41 lokey=40 hikey=42
+    <region> lovel=0 hivel=$LOVELOCITYMAX sample=kalimbass_41-F1_v2.flac
+    <region> lovel=$MIDVELOCITYMIN hivel=$MIDVELOCITYMAX sample=kalimbass_41-F1_v2.flac
+    <region> lovel=$HIVELOCITYMIN hivel=$HIVELOCITYMAX sample=kalimbass_41-F1_v3.flac
+  <group> key=44 lokey=43 hikey=45
+    <region> lovel=0 hivel=$LOVELOCITYMAX sample=kalimbass_44-G#1_v1.flac
+    <region> lovel=$MIDVELOCITYMIN hivel=$MIDVELOCITYMAX sample=kalimbass_44-G#1_v2.flac tune=25
+    <region> lovel=$HIVELOCITYMIN hivel=$HIVELOCITYMAX sample=kalimbass_44-G#1_v3.flac tune=25
+  <group> key=47 lokey=46 hikey=$LOVELOCITYMAX
+    <region> lovel=0 hivel=$LOVELOCITYMAX sample=kalimbass_47-B1_v1.flac
+    <region> lovel=$MIDVELOCITYMIN hivel=$MIDVELOCITYMAX sample=kalimbass_47-B1_v2.flac
+    <region> lovel=$HIVELOCITYMIN hivel=$HIVELOCITYMAX sample=kalimbass_47-B1_v3.flac
+  <group> key=50 lokey=$MIDVELOCITYMIN hikey=51
+    <region> lovel=0 hivel=$LOVELOCITYMAX sample=kalimbass_50-D2_v1.flac
+    <region> lovel=$MIDVELOCITYMIN hivel=$MIDVELOCITYMAX sample=kalimbass_50-D2_v2.flac
+    <region> lovel=$HIVELOCITYMIN hivel=$HIVELOCITYMAX sample=kalimbass_50-D2_v3.flac
+  <group> key=53 lokey=52 hikey=54
+    <region> lovel=0 hivel=$LOVELOCITYMAX sample=kalimbass_53-F2_v1.flac
+    <region> lovel=$MIDVELOCITYMIN hivel=$MIDVELOCITYMAX sample=kalimbass_53-F2_v2.flac
+    <region> lovel=$HIVELOCITYMIN hivel=$HIVELOCITYMAX sample=kalimbass_53-F2_v3.flac
+  <group> key=56 lokey=55 hikey=57
+    <region> lovel=0 hivel=$LOVELOCITYMAX sample=kalimbass_56-G#2_v1.flac
+    <region> lovel=$MIDVELOCITYMIN hivel=$MIDVELOCITYMAX sample=kalimbass_56-G#2_v2.flac
+    <region> lovel=$HIVELOCITYMIN hivel=$HIVELOCITYMAX sample=kalimbass_56-G#2_v3.flac
+  <group> key=59 lokey=58 hikey=60
+    <region> lovel=0 hivel=$LOVELOCITYMAX sample=kalimbass_59-B2_v1.flac
+    <region> lovel=$MIDVELOCITYMIN hivel=$MIDVELOCITYMAX sample=kalimbass_59-B2_v2.flac
+    <region> lovel=$HIVELOCITYMIN hivel=$HIVELOCITYMAX sample=kalimbass_59-B2_v3.flac
+  <group> key=62 lokey=61 hikey=87
+    <region> lovel=0 hivel=$LOVELOCITYMAX sample=kalimbass_62-D3_v1.flac
+    <region> lovel=$MIDVELOCITYMIN hivel=$MIDVELOCITYMAX sample=kalimbass_62-D3_v2.flac
+    <region> lovel=$HIVELOCITYMIN hivel=$HIVELOCITYMAX sample=kalimbass_62-D3_v3.flac
+  <group> lovel=$PONTVELOCITYMIN tune=-30 // Sul Pont articulations
+    <region> key=23 lokey=19 hikey=23 sample=kalimbass sul pont 23-B-1.flac
+    <region> key=26 lokey=24 hikey=28 sample=kalimbass sul pont 26-D0.flac
+    <region> key=29 lokey=29 hikey=33 sample=kalimbass sul pont 29-F0.flac
+    <region> key=33 lokey=34 hikey=38 sample=kalimbass sul pont 33-A0.flac
+    <region> key=37 lokey=39 hikey=43 sample=kalimbass sul pont 37-C#1.flac
+    <region> key=41 lokey=44 hikey=48 sample=kalimbass sul pont 41-F1.flac
+    <region> key=45 lokey=49 hikey=53 sample=kalimbass sul pont 45-A1.flac
+    <region> key=49 lokey=54 hikey=58 sample=kalimbass sul pont 49-C#2.flac
+    <region> key=53 lokey=59 hikey=87 sample=kalimbass sul pont 53-F2.flac
+
+// Soft Sample
+<master> sw_last=13 group=5 sw_label=C#-1 Soft Artic
+  <region> key=23 lokey=19 hikey=24 sample=kalimbass_23-B-1_v1.flac
+  <region> key=26 lokey=25 hikey=27 sample=kalimbass_26-D0_v1.flac
+  <region> key=29 lokey=28 hikey=30 sample=kalimbass_29-F0_v1.flac
+  <region> key=32 lokey=31 hikey=33 sample=kalimbass_32-G#0_v1.flac
+  <region> key=35 lokey=34 hikey=36 sample=kalimbass_35-B0_v1.flac
+  <region> key=38 lokey=37 hikey=39 sample=kalimbass_38-D1_v1.flac
+  <region> key=41 lokey=40 hikey=42 sample=kalimbass_41-F1_v2.flac
+  <region> key=44 lokey=43 hikey=45 sample=kalimbass_44-G#1_v1.flac tune=35
+  <region> key=47 lokey=46 hikey=48 sample=kalimbass_47-B1_v1.flac
+  <region> key=50 lokey=49 hikey=51 sample=kalimbass_50-D2_v1.flac tune=14
+  <region> key=53 lokey=52 hikey=54 sample=kalimbass_53-F2_v1.flac
+  <region> key=56 lokey=55 hikey=57 sample=kalimbass_56-G#2_v1.flac
+  <region> key=59 lokey=58 hikey=60 sample=kalimbass_59-B2_v1.flac
+  <region> key=62 lokey=61 hikey=87 sample=kalimbass_62-D3_v1.flac
+
+// Medium Sample
+<master> sw_last=14 group=5 sw_label=D-1 Medium Artic
+  <region> key=23 lokey=19 hikey=24 sample=kalimbass_23-B-1_v2.flac
+  <region> key=26 lokey=25 hikey=27 sample=kalimbass_26-D0_v2.flac
+  <region> key=29 lokey=28 hikey=30 sample=kalimbass_29-F0_v2.flac
+  <region> key=32 lokey=31 hikey=33 sample=kalimbass_32-G#0_v2.flac
+  <region> key=35 lokey=34 hikey=36 sample=kalimbass_35-B0_v2.flac
+  <region> key=38 lokey=37 hikey=39 sample=kalimbass_38-D1_v2.flac
+  <region> key=41 lokey=40 hikey=42 sample=kalimbass_41-F1_v2.flac
+  <region> key=44 lokey=43 hikey=45 sample=kalimbass_44-G#1_v2.flac tune=35
+  <region> key=47 lokey=46 hikey=48 sample=kalimbass_47-B1_v2.flac
+  <region> key=50 lokey=49 hikey=51 sample=kalimbass_50-D2_v2.flac tune=14
+  <region> key=53 lokey=52 hikey=54 sample=kalimbass_53-F2_v2.flac
+  <region> key=56 lokey=55 hikey=57 sample=kalimbass_56-G#2_v2.flac
+  <region> key=59 lokey=58 hikey=60 sample=kalimbass_59-B2_v2.flac
+  <region> key=62 lokey=61 hikey=87 sample=kalimbass_62-D3_v2.flac
+
+// Hard Sample
+<master> sw_last=15 group=5 sw_label=D#-1 Hard Artic
+  <region> key=23 lokey=19 hikey=24 sample=kalimbass_23-B-1_v3.flac
+  <region> key=26 lokey=25 hikey=27 sample=kalimbass_26-D0_v3.flac
+  <region> key=29 lokey=28 hikey=30 sample=kalimbass_29-F0_v3.flac
+  <region> key=32 lokey=31 hikey=33 sample=kalimbass_32-G#0_v3.flac
+  <region> key=35 lokey=34 hikey=36 sample=kalimbass_35-B0_v3.flac tune=20
+  <region> key=38 lokey=37 hikey=39 sample=kalimbass_38-D1_v3.flac
+  <region> key=41 lokey=40 hikey=42 sample=kalimbass_41-F1_v3.flac
+  <region> key=44 lokey=43 hikey=45 sample=kalimbass_44-G#1_v3.flac tune=35
+  <region> key=47 lokey=46 hikey=48 sample=kalimbass_47-B1_v3.flac
+  <region> key=50 lokey=49 hikey=51 sample=kalimbass_50-D2_v3.flac tune=14
+  <region> key=53 lokey=52 hikey=54 sample=kalimbass_53-F2_v3.flac
+  <region> key=56 lokey=55 hikey=57 sample=kalimbass_56-G#2_v3.flac
+  <region> key=59 lokey=58 hikey=60 sample=kalimbass_59-B2_v3.flac
+  <region> key=62 lokey=61 hikey=87 sample=kalimbass_62-D3_v3.flac
+
+// Sul Pont
+<master> sw_last=16 group=5 tune=-30 sw_label=E-1 Sul Pont Artic
+  <region> key=23 lokey=19 hikey=23 sample=kalimbass sul pont 23-B-1.flac
+  <region> key=26 lokey=24 hikey=28 sample=kalimbass sul pont 26-D0.flac
+  <region> key=29 lokey=29 hikey=33 sample=kalimbass sul pont 29-F0.flac
+  <region> key=33 lokey=34 hikey=38 sample=kalimbass sul pont 33-A0.flac
+  <region> key=37 lokey=39 hikey=43 sample=kalimbass sul pont 37-C#1.flac
+  <region> key=41 lokey=44 hikey=48 sample=kalimbass sul pont 41-F1.flac
+  <region> key=45 lokey=49 hikey=53 sample=kalimbass sul pont 45-A1.flac
+  <region> key=49 lokey=54 hikey=58 sample=kalimbass sul pont 49-C#2.flac
+  <region> key=53 lokey=59 hikey=87 sample=kalimbass sul pont 53-F2.flac
